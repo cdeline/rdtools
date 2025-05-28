@@ -256,7 +256,8 @@ def test_degradation_timeseries_plot(degradation_info):
     result = degradation_timeseries_plot(yoy_info)
     assert_isinstance(result, plt.Figure)
     # test other label options
-    result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False, label='center', fig=result)
+    result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False,
+                                         label='center', fig=result)
     assert_isinstance(result, plt.Figure)
     result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False, label='left')
     assert_isinstance(result, plt.Figure)
@@ -264,7 +265,7 @@ def test_degradation_timeseries_plot(degradation_info):
     assert_isinstance(result, plt.Figure)
 
     with pytest.raises(KeyError):
-        degradation_timeseries_plot({'a':1}, include_ci=False)
+        degradation_timeseries_plot({'a': 1}, include_ci=False)
     with pytest.raises(ValueError):
         degradation_timeseries_plot(yoy_info, include_ci=False, label='CENTER')
 

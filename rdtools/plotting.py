@@ -431,7 +431,7 @@ def availability_summary_plots(power_system, power_subsystem, loss_total,
     return fig
 
 
-def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, label= 'right',
+def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, label='right',
                                 fig=None, plot_color=None, ci_color=None, **kwargs):
     '''
     Plot resampled time series of degradation trend with time
@@ -448,8 +448,9 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
     include_ci : bool, default True
         calculate and plot 2-sigma confidence intervals along with rolling median
     label    : {'right', 'left', 'center'}, default 'right'
-        A combination of 1) which Year-on-Year slope edge to label, and 2) which rolling median edge to label.
-        
+        A combination of 1) which Year-on-Year slope edge to label,
+        and 2) which rolling median edge to label.
+
         * ``right`` : label right edge of YoY slope and right edge of rolling median interval.
         * ``center``: label center of YoY slope interval and center of rolling median interval.
         * ``left``  : label left edge of YoY slope and center of rolling median interval.
@@ -471,7 +472,9 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
     -------
     matplotlib.figure.Figure
     '''
+
     import datetime
+
     def _bootstrap(x, percentile, reps):
         # stolen from degradation_year_on_year
         n1 = len(x)
@@ -488,7 +491,7 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
         plot_color = 'tab:orange'
     if ci_color is None:
         ci_color = 'C0'
-    
+
     if label not in {None, "left", "right", "center"}:
         raise ValueError(f"Unsupported value {label} for `label`")
     if label is None:
@@ -515,7 +518,7 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
     else:
         ax = fig.axes[0]
     if include_ci:
-        ax.fill_between(ci_lower.index - datetime.timedelta(days=offset_days), 
+        ax.fill_between(ci_lower.index - datetime.timedelta(days=offset_days),
                         ci_lower, ci_upper, color=ci_color)
     ax.plot(roller.median().index - datetime.timedelta(days=offset_days),
             roller.median(), color=plot_color, **kwargs)
