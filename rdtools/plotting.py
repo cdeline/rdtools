@@ -448,10 +448,11 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
     include_ci : bool, default True
         calculate and plot 2-sigma confidence intervals along with rolling median
     label    : {'right', 'left', 'center'}, default 'right'
-        A combination of 1) which Year-on-Year slope edge to label, and 2) which rolling median edge to label. 
-        'right' : label right edge of YoY slope and right edge of rolling median interval.
-        'center': label center of YoY slope interval and center of rolling median interval.
-        'left'  : label left edge of YoY slope and center of rolling median interval.
+        A combination of 1) which Year-on-Year slope edge to label, and 2) which rolling median edge to label.
+        
+        * ``right`` : label right edge of YoY slope and right edge of rolling median interval.
+        * ``center``: label center of YoY slope interval and center of rolling median interval.
+        * ``left``  : label left edge of YoY slope and center of rolling median interval.
     fig     : matplotlib, optional
         fig object to add new plot to (first set of axes only)
     plot_color : str, optional
