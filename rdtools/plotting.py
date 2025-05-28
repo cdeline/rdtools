@@ -431,7 +431,7 @@ def availability_summary_plots(power_system, power_subsystem, loss_total,
     return fig
 
 
-def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
+def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, label= 'right',
                                 fig=None, plot_color=None, ci_color=None, **kwargs):
     '''
     Plot resampled time series of degradation trend with time
@@ -447,6 +447,11 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
         at least 50% of datapoints to be included in rolling plot.
     include_ci : bool, default True
         calculate and plot 2-sigma confidence intervals along with rolling median
+    label    : {'right', 'left', 'center'}, default 'right'
+        A combination of 1) which Year-on-Year slope edge to label, and 2) which rolling median edge to label. 
+        'right' : label right edge of YoY slope and right edge of rolling median interval.
+        'center': label center of YoY slope interval and center of rolling median interval.
+        'left'  : label left edge of YoY slope and center of rolling median interval.
     fig     : matplotlib, optional
         fig object to add new plot to (first set of axes only)
     plot_color : str, optional
@@ -465,7 +470,7 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
     -------
     matplotlib.figure.Figure
     '''
-
+    import datetime
     def _bootstrap(x, percentile, reps):
         # stolen from degradation_year_on_year
         n1 = len(x)
@@ -475,7 +480,6 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
 
     try:
         results_values = yoy_info['YoY_values']
-
     except KeyError:
         raise KeyError("yoy_info input dictionary does not contain key `YoY_values`.")
 
@@ -483,8 +487,23 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
         plot_color = 'tab:orange'
     if ci_color is None:
         ci_color = 'C0'
+    
+    if label not in {None, "left", "right", "center"}:
+        raise ValueError(f"Unsupported value {label} for `label`")
+    if label is None:
+        label = "right"
 
-    roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2)
+    if label == "right":
+        center = False
+        offset_days = 0
+    elif label == "center":
+        center = True
+        offset_days = 182
+    elif label == "left":
+        center = True
+        offset_days = 365
+
+    roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2, center=center)
     # unfortunately it seems that you can't return multiple values in the rolling.apply() kernel.
     # TODO: figure out some workaround to return both percentiles in a single pass
     if include_ci:
@@ -495,8 +514,10 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
     else:
         ax = fig.axes[0]
     if include_ci:
-        ax.fill_between(ci_lower.index, ci_lower, ci_upper, color=ci_color)
-    ax.plot(roller.median(), color=plot_color, **kwargs)
+        ax.fill_between(ci_lower.index - datetime.timedelta(days=offset_days), 
+                        ci_lower, ci_upper, color=ci_color)
+    ax.plot(roller.median().index - datetime.timedelta(days=offset_days),
+            roller.median(), color=plot_color, **kwargs)
     ax.axhline(results_values.median(), c='k', ls='--')
     plt.ylabel('Degradation trend (%/yr)')
     fig.autofmt_xdate()
