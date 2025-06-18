@@ -255,12 +255,15 @@ def test_degradation_timeseries_plot(degradation_info):
     # test defaults
     result = degradation_timeseries_plot(yoy_info)
     assert_isinstance(result, plt.Figure)
+    assert(result.get_axes()[0].get_xlim()[0] == 17685.55)
     # test other label options
     result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False,
                                          label='center', fig=result)
     assert_isinstance(result, plt.Figure)
+    assert(result.get_axes()[0].get_xlim()[0] == 17304.4)
     result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False, label='left')
     assert_isinstance(result, plt.Figure)
+    assert(result.get_axes()[0].get_xlim()[0] == 17130.5)
     result = degradation_timeseries_plot(yoy_info=yoy_info, include_ci=False, label=None)
     assert_isinstance(result, plt.Figure)
 
