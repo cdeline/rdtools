@@ -218,15 +218,16 @@ class DegradationTestCase(unittest.TestCase):
         rd_result2 = degradation_year_on_year(
             self.test_corr_energy[input_freq], label='right')
         pd.testing.assert_index_equal(rd_result1[2]['YoY_values'].index,
-                         rd_result2[2]['YoY_values'].index)
+                                      rd_result2[2]['YoY_values'].index)
         # 365/2 days difference between center and right label
         self.assertAlmostEqual((rd_result2[2]['YoY_values'].index -
                                rd_result[2]['YoY_values'].index).mean(),
                                pd.Timedelta('183d'),
                                delta=pd.Timedelta('1d'))
         with pytest.raises(ValueError):
-            degradation_year_on_year(self.test_corr_energy[input_freq], 
+            degradation_year_on_year(self.test_corr_energy[input_freq],
                                      label='LEFT')
+
 
 @pytest.mark.parametrize(
     "start,end,freq",
