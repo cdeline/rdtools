@@ -179,7 +179,8 @@ def degradation_classical_decomposition(energy_normalized,
 
 def degradation_year_on_year(energy_normalized, recenter=True,
                              exceedance_prob=95, confidence_level=68.2,
-                             uncertainty_method='simple', block_length=30):
+                             uncertainty_method='simple', block_length=30,
+                             label='right'):
     '''
     Estimate the trend of a timeseries using the year-on-year decomposition
     approach and calculate a Monte Carlo-derived confidence interval of slope.
@@ -208,6 +209,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         If `uncertainty_method` is 'circular_block', `block_length`
         determines the length of the blocks used in the circular block bootstrapping
         in number of days. Must be shorter than a third of the time series.
+    label    : {'right', 'center'}, default 'right'
+        Which Year-on-Year slope edge to label.
 
     Returns
     -------
@@ -218,7 +221,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         degradation rate estimate
     calc_info : dict
 
-        * `YoY_values` - pandas series of right-labeled year on year slopes
+        * `YoY_values` - pandas series of year on year slopes, either right
+            or center labeled, depending on the `label` parameter.
         * `renormalizing_factor` - float of value used to recenter data
         * `exceedance_level` - the degradation rate that was outperformed with
           probability of `exceedance_prob`
@@ -232,6 +236,12 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     energy_normalized = energy_normalized.sort_index()
     energy_normalized.name = 'energy'
     energy_normalized.index.name = 'dt'
+
+    if label not in {None, "right", "center"}:
+        raise ValueError(f"Unsupported value {label} for `label`."
+                         " Must be 'right' or 'center'.")
+    if label is None:
+        label = "right"
 
     # Detect less than 2 years of data. This is complicated by two things:
     #   - leap days muddle the precise meaning of "two years of data".
@@ -284,11 +294,15 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     df['yoy'] = 100.0 * (df.energy - df.energy_right) / (df.time_diff_years)
     df.index = df.dt
 
-    yoy_result = df.yoy.dropna()
-
     df_right = df.set_index(df.dt_right).drop_duplicates('dt_right')
     df['usage_of_points'] = df.yoy.notnull().astype(int).add(
                 df_right.yoy.notnull().astype(int), fill_value=0)
+    df['dt_center'] = df[['dt', 'dt_right']].mean(axis=1)
+    if label == 'center':
+        df = df.set_index(df.dt_center)
+        df.index.name = 'dt'
+
+    yoy_result = df.yoy.dropna()
 
     if not len(yoy_result):
         raise ValueError('no year-over-year aggregated data pairs found')
