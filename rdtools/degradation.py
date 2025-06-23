@@ -297,7 +297,12 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     df_right = df.set_index(df.dt_right).drop_duplicates('dt_right')
     df['usage_of_points'] = df.yoy.notnull().astype(int).add(
                 df_right.yoy.notnull().astype(int), fill_value=0)
-    df['dt_center'] = df[['dt', 'dt_right']].mean(axis=1)
+    if pd.__version__ < '2.0.0':
+        # For old Pandas versions < 2.0.0, time columns cannot be averaged
+        # with each other, so we use a custom function to calculate center label
+        df['dt_center'] = _avg_timestamp_old_Pandas(df.dt, df.dt_right)
+    else:
+        df['dt_center'] = pd.to_datetime(df[['dt', 'dt_right']].mean(axis=1))
     if label == 'center':
         df = df.set_index(df.dt_center)
         df.index.name = 'dt'
@@ -368,6 +373,51 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     else:  # If we do not need confidence intervals and exceedance level
         return Rd_pct
+
+
+def _avg_timestamp_old_Pandas(dt, dt_right):
+    '''
+    For old Pandas versions < 2.0.0, time columns cannot be averaged
+    together.  From https://stackoverflow.com/questions/57812300/
+    python-pandas-to-calculate-mean-of-datetime-of-multiple-columns
+
+    Parameters
+    ----------
+    dt : pandas.Series
+        First series with datetime values
+    dt_right : pandas.Series
+        Second series with datetime values.
+
+    Returns
+    -------
+    pandas.Series
+        Series with the average timestamp of df1 and df2.
+    '''
+    import time
+    import datetime
+
+    temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+                            'dt_right' : dt_right.dt.tz_localize(None)
+                            }).tz_localize(None)
+
+    # conversion from dates to seconds since epoch (unix time)
+    def to_unix(s):
+        if type(s) is pd.Timestamp:
+            return time.mktime(s.date().timetuple())
+        else:
+            return pd.NaT
+
+    # sum the seconds since epoch, calculate average, and convert back to readable date
+    averages = []
+    for index, row in temp_df.iterrows():
+        unix = [to_unix(i) for i in row]
+        try:
+            average = sum(unix) / len(unix)
+            averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
+        except TypeError:
+            averages.append(pd.NaT)
+    temp_df['averages'] = averages
+    return temp_df['averages']
 
 
 def _mk_test(x, alpha=0.05):

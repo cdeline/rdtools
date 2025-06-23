@@ -48,7 +48,7 @@ INSTALL_REQUIRES = [
     "pandas >= 1.4.4",
     "statsmodels >= 0.13.5",
     # statsmodels 0.14.4 is not able to handle the latest scipy
-    "scipy >= 1.8.1, <1.16.0", 
+    "scipy >= 1.8.1, <1.16.0",
     "h5py >= 3.7.0",
     "plotly>=4.0.0",
     "xgboost >= 1.6.0",
