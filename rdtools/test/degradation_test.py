@@ -221,8 +221,8 @@ class DegradationTestCase(unittest.TestCase):
                                       rd_result2[2]['YoY_values'].index)
         # 365/2 days difference between center and right label
         assert (rd_result2[2]['YoY_values'].index -
-                 rd_result[2]['YoY_values'].index).mean().days == \
-                    pytest.approx(183, abs=1)
+                rd_result[2]['YoY_values'].index).mean().days == \
+            pytest.approx(183, abs=1)
 
         with pytest.raises(ValueError):
             degradation_year_on_year(self.test_corr_energy[input_freq],
