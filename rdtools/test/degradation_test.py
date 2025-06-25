@@ -233,18 +233,18 @@ class DegradationTestCase(unittest.TestCase):
         from rdtools.degradation import _avg_timestamp_old_Pandas
         funcName = sys._getframe().f_code.co_name
         logging.debug('Running {}'.format(funcName))
-        dt = pd.Series(self.test_corr_energy['D'].index[-3:],
-                       index=self.test_corr_energy['D'].index[-3:])
-        dt_right = pd.Series(self.test_corr_energy['D'].index[-3:] +
-                             pd.Timedelta(days=365), index=self.test_corr_energy['D'].index[-3:])
+        dt = pd.Series(self.get_corr_energy(0,'D').index[-3:].tz_localize('UTC'),
+                       index=self.get_corr_energy(0,'D').index[-3:].tz_localize('UTC'))
+        dt_right = pd.Series(self.get_corr_energy(0,'D').index[-3:].tz_localize('UTC') +
+                             pd.Timedelta(days=365), index=self.get_corr_energy(0,'D').index[-3:].tz_localize('UTC'))
         # Expected result is the midpoint between each pair
         expected = pd.Series([
-            pd.Timestamp("2015-06-30 19:00:00"),
-            pd.Timestamp("2015-07-01 19:00:00"),
-            pd.Timestamp("2015-07-02 19:00:00")],
-            index=self.test_corr_energy['D'].index[-3:],
-            name='averages'
-        )
+            pd.Timestamp("2015-06-30 12:00:00"),
+            pd.Timestamp("2015-07-01 12:00:00"),
+            pd.Timestamp("2015-07-02 12:00:00")],
+            index=self.get_corr_energy(0,'D').index[-3:],
+            name='averages', dtype='datetime64[ns, UTC]'
+        ).tz_localize('UTC')
 
         result = _avg_timestamp_old_Pandas(dt, dt_right)
         print(result)
