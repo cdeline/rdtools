@@ -394,7 +394,6 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
         Series with the average timestamp of df1 and df2.
     '''
     import time
-    import datetime
 
     temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
                             'dt_right' : dt_right.dt.tz_localize(None)
@@ -413,7 +412,7 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
         unix = [to_unix(i) for i in row]
         try:
             average = sum(unix) / len(unix)
-            #averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
+            # averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
             averages.append(pd.to_datetime(average, unit='s'))
         except TypeError:
             averages.append(pd.NaT)
