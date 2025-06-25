@@ -227,6 +227,28 @@ class DegradationTestCase(unittest.TestCase):
         with pytest.raises(ValueError):
             degradation_year_on_year(self.test_corr_energy[input_freq],
                                      label='LEFT')
+    
+    def test_avg_timestamp_old_Pandas(self):
+        """Test the _avg_timestamp_old_Pandas function for correct averaging."""
+        from rdtools.degradation import _avg_timestamp_old_Pandas
+        funcName = sys._getframe().f_code.co_name
+        logging.debug('Running {}'.format(funcName))
+        dt = pd.Series(self.test_corr_energy['D'].index[-3:], index = self.test_corr_energy['D'].index[-3:])
+        dt_right = pd.Series(self.test_corr_energy['D'].index[-3:]+ 
+                             pd.Timedelta(days=365), index = self.test_corr_energy['D'].index[-3:])
+        # Expected result is the midpoint between each pair
+        expected = pd.Series([
+            pd.Timestamp("2015-06-30 19:00:00"),
+            pd.Timestamp("2015-07-01 19:00:00"),
+            pd.Timestamp("2015-07-02 19:00:00")],
+            index = self.test_corr_energy['D'].index[-3:],
+            name = 'averages'
+        )
+
+        result = _avg_timestamp_old_Pandas(dt, dt_right)
+        print(result)
+        print(expected)
+        pd.testing.assert_series_equal(result, expected)
 
 
 @pytest.mark.parametrize(

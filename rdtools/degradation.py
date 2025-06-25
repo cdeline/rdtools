@@ -398,7 +398,7 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
 
     temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
                             'dt_right' : dt_right.dt.tz_localize(None)
-                            }).tz_localize(None)
+                            })
 
     # conversion from dates to seconds since epoch (unix time)
     def to_unix(s):
@@ -413,11 +413,12 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
         unix = [to_unix(i) for i in row]
         try:
             average = sum(unix) / len(unix)
-            averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
+            #averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
+            averages.append(pd.to_datetime(average, unit='s'))
         except TypeError:
             averages.append(pd.NaT)
     temp_df['averages'] = averages
-    return temp_df['averages']
+    return temp_df['averages'].dt.tz_localize(dt.dt.tz)
 
 
 def _mk_test(x, alpha=0.05):
