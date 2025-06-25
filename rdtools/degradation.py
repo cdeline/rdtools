@@ -409,7 +409,8 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
     # sum the seconds since epoch, calculate average, and convert back to readable date
     averages = []
     for index, row in temp_df.iterrows():
-        unix = [to_unix(i) for i in row]
+        # unix = [to_unix(i) for i in row]
+        unix = [pd.Timestamp(i).timestamp() for i in row]
         try:
             average = sum(unix) / len(unix)
             # averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
