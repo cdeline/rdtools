@@ -393,7 +393,7 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
     pandas.Series
         Series with the average timestamp of df1 and df2.
     '''
-    import time
+    import calendar
 
     temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
                             'dt_right' : dt_right.dt.tz_localize(None)
@@ -402,15 +402,15 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
     # conversion from dates to seconds since epoch (unix time)
     def to_unix(s):
         if type(s) is pd.Timestamp:
-            return time.mktime(s.date().timetuple())
+            return calendar.timegm(s.timetuple())
         else:
             return pd.NaT
 
     # sum the seconds since epoch, calculate average, and convert back to readable date
     averages = []
     for index, row in temp_df.iterrows():
-        # unix = [to_unix(i) for i in row]
-        unix = [pd.Timestamp(i).timestamp() for i in row]
+        unix = [to_unix(i) for i in row]
+        # unix = [pd.Timestamp(i).timestamp() for i in row]
         try:
             average = sum(unix) / len(unix)
             # averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
