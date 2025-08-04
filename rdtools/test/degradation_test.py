@@ -202,6 +202,56 @@ class DegradationTestCase(unittest.TestCase):
             self.test_corr_energy[input_freq])
         self.assertTrue((np.sum(rd_result[2]['usage_of_points'])) == 1462)
 
+    def test_degradation_year_on_year_label_center(self):
+        ''' Test degradation_year_on_year with label="center". '''
+
+        funcName = sys._getframe().f_code.co_name
+        logging.debug('Running {}'.format(funcName))
+
+        # test YOY degradation calc with label='center'
+        input_freq = 'D'
+        rd_result = degradation_year_on_year(
+            self.test_corr_energy[input_freq], label='center')
+        self.assertAlmostEqual(rd_result[0], 100 * self.rd, places=1)
+        rd_result1 = degradation_year_on_year(
+            self.test_corr_energy[input_freq], label=None)
+        rd_result2 = degradation_year_on_year(
+            self.test_corr_energy[input_freq], label='right')
+        pd.testing.assert_index_equal(rd_result1[2]['YoY_values'].index,
+                                      rd_result2[2]['YoY_values'].index)
+        # 365/2 days difference between center and right label
+        assert (rd_result2[2]['YoY_values'].index -
+                rd_result[2]['YoY_values'].index).mean().days == \
+            pytest.approx(183, abs=1)
+
+        with pytest.raises(ValueError):
+            degradation_year_on_year(self.test_corr_energy[input_freq],
+                                     label='LEFT')
+
+    def test_avg_timestamp_old_Pandas(self):
+        """Test the _avg_timestamp_old_Pandas function for correct averaging."""
+        from rdtools.degradation import _avg_timestamp_old_Pandas
+        funcName = sys._getframe().f_code.co_name
+        logging.debug('Running {}'.format(funcName))
+        dt = pd.Series(self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'),
+                       index=self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'))
+        dt_right = pd.Series(self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC') +
+                             pd.Timedelta(days=365),
+                             index=self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'))
+        # Expected result is the midpoint between each pair
+        expected = pd.Series([
+            pd.Timestamp("2015-06-30 12:00:00"),
+            pd.Timestamp("2015-07-01 12:00:00"),
+            pd.Timestamp("2015-07-02 12:00:00")],
+            index=self.get_corr_energy(0, 'D').index[-3:],
+            name='averages', dtype='datetime64[ns, UTC]'
+        ).tz_localize('UTC')
+
+        result = _avg_timestamp_old_Pandas(dt, dt_right).asfreq(freq='D')
+        print(result)
+        print(expected)
+        pd.testing.assert_series_equal(result, expected)
+
 
 @pytest.mark.parametrize(
     "start,end,freq",

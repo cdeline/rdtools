@@ -179,7 +179,8 @@ def degradation_classical_decomposition(energy_normalized,
 
 def degradation_year_on_year(energy_normalized, recenter=True,
                              exceedance_prob=95, confidence_level=68.2,
-                             uncertainty_method='simple', block_length=30):
+                             uncertainty_method='simple', block_length=30,
+                             label='right'):
     '''
     Estimate the trend of a timeseries using the year-on-year decomposition
     approach and calculate a Monte Carlo-derived confidence interval of slope.
@@ -208,6 +209,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         If `uncertainty_method` is 'circular_block', `block_length`
         determines the length of the blocks used in the circular block bootstrapping
         in number of days. Must be shorter than a third of the time series.
+    label    : {'right', 'center'}, default 'right'
+        Which Year-on-Year slope edge to label.
 
     Returns
     -------
@@ -218,7 +221,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         degradation rate estimate
     calc_info : dict
 
-        * `YoY_values` - pandas series of right-labeled year on year slopes
+        * `YoY_values` - pandas series of year on year slopes, either right
+            or center labeled, depending on the `label` parameter.
         * `renormalizing_factor` - float of value used to recenter data
         * `exceedance_level` - the degradation rate that was outperformed with
           probability of `exceedance_prob`
@@ -232,6 +236,12 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     energy_normalized = energy_normalized.sort_index()
     energy_normalized.name = 'energy'
     energy_normalized.index.name = 'dt'
+
+    if label not in {None, "right", "center"}:
+        raise ValueError(f"Unsupported value {label} for `label`."
+                         " Must be 'right' or 'center'.")
+    if label is None:
+        label = "right"
 
     # Detect less than 2 years of data. This is complicated by two things:
     #   - leap days muddle the precise meaning of "two years of data".
@@ -284,11 +294,20 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     df['yoy'] = 100.0 * (df.energy - df.energy_right) / (df.time_diff_years)
     df.index = df.dt
 
-    yoy_result = df.yoy.dropna()
-
     df_right = df.set_index(df.dt_right).drop_duplicates('dt_right')
     df['usage_of_points'] = df.yoy.notnull().astype(int).add(
                 df_right.yoy.notnull().astype(int), fill_value=0)
+    if pd.__version__ < '2.0.0':
+        # For old Pandas versions < 2.0.0, time columns cannot be averaged
+        # with each other, so we use a custom function to calculate center label
+        df['dt_center'] = _avg_timestamp_old_Pandas(df.dt, df.dt_right)
+    else:
+        df['dt_center'] = pd.to_datetime(df[['dt', 'dt_right']].mean(axis=1))
+    if label == 'center':
+        df = df.set_index(df.dt_center)
+        df.index.name = 'dt'
+
+    yoy_result = df.yoy.dropna()
 
     if not len(yoy_result):
         raise ValueError('no year-over-year aggregated data pairs found')
@@ -354,6 +373,52 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     else:  # If we do not need confidence intervals and exceedance level
         return Rd_pct
+
+
+def _avg_timestamp_old_Pandas(dt, dt_right):
+    '''
+    For old Pandas versions < 2.0.0, time columns cannot be averaged
+    together.  From https://stackoverflow.com/questions/57812300/
+    python-pandas-to-calculate-mean-of-datetime-of-multiple-columns
+
+    Parameters
+    ----------
+    dt : pandas.Series
+        First series with datetime values
+    dt_right : pandas.Series
+        Second series with datetime values.
+
+    Returns
+    -------
+    pandas.Series
+        Series with the average timestamp of df1 and df2.
+    '''
+    import calendar
+
+    temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+                            'dt_right' : dt_right.dt.tz_localize(None)
+                            }).tz_localize(None)
+
+    # conversion from dates to seconds since epoch (unix time)
+    def to_unix(s):
+        if type(s) is pd.Timestamp:
+            return calendar.timegm(s.timetuple())
+        else:
+            return pd.NaT
+
+    # sum the seconds since epoch, calculate average, and convert back to readable date
+    averages = []
+    for index, row in temp_df.iterrows():
+        unix = [to_unix(i) for i in row]
+        # unix = [pd.Timestamp(i).timestamp() for i in row]
+        try:
+            average = sum(unix) / len(unix)
+            # averages.append(datetime.datetime.utcfromtimestamp(average).strftime('%Y-%m-%d'))
+            averages.append(pd.to_datetime(average, unit='s'))
+        except TypeError:
+            averages.append(pd.NaT)
+    temp_df['averages'] = averages
+    return (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
 
 
 def _mk_test(x, alpha=0.05):
