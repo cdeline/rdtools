@@ -364,6 +364,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
         # Save calculation information
         calc_info = {
+            'YoY_values': yoy_result,
             'renormalizing_factor': renorm,
             'exceedance_level': exceedance_level,
             'usage_of_points': df['usage_of_points'],
@@ -372,7 +373,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         return (Rd_pct, Rd_CI, calc_info)
 
     else:  # If we do not need confidence intervals and exceedance level
-        return Rd_pct
+        calc_info = {'YoY_values': yoy_result}
+        return (Rd_pct, None, calc_info)
 
 
 def _avg_timestamp_old_Pandas(dt, dt_right):
