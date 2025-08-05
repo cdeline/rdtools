@@ -286,23 +286,23 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     df = pd.merge_asof(energy_normalized[['dt', 'energy']],
                        energy_normalized.sort_values('dt_shifted'),
                        left_on='dt', right_on='dt_shifted',
-                       suffixes=['', '_right'],
+                       suffixes=['', '_left'],
                        tolerance=pd.Timedelta('8D')
                        )
 
-    df['time_diff_years'] = (df.dt - df.dt_right) / pd.Timedelta('365d')
-    df['yoy'] = 100.0 * (df.energy - df.energy_right) / (df.time_diff_years)
+    df['time_diff_years'] = (df.dt - df.dt_left) / pd.Timedelta('365d')
+    df['yoy'] = 100.0 * (df.energy - df.energy_left) / (df.time_diff_years)
     df.index = df.dt
 
-    df_right = df.set_index(df.dt_right).drop_duplicates('dt_right')
+    df_left = df.set_index(df.dt_left).drop_duplicates('dt_left')
     df['usage_of_points'] = df.yoy.notnull().astype(int).add(
-                df_right.yoy.notnull().astype(int), fill_value=0)
+                df_left.yoy.notnull().astype(int), fill_value=0)
     if pd.__version__ < '2.0.0':
         # For old Pandas versions < 2.0.0, time columns cannot be averaged
         # with each other, so we use a custom function to calculate center label
-        df['dt_center'] = _avg_timestamp_old_Pandas(df.dt, df.dt_right)
+        df['dt_center'] = _avg_timestamp_old_Pandas(df.dt, df.dt_left)
     else:
-        df['dt_center'] = pd.to_datetime(df[['dt', 'dt_right']].mean(axis=1))
+        df['dt_center'] = pd.to_datetime(df[['dt', 'dt_left']].mean(axis=1))
     if label == 'center':
         df = df.set_index(df.dt_center)
         df.index.name = 'dt'
@@ -377,7 +377,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         return (Rd_pct, None, calc_info)
 
 
-def _avg_timestamp_old_Pandas(dt, dt_right):
+def _avg_timestamp_old_Pandas(dt, dt_left):
     '''
     For old Pandas versions < 2.0.0, time columns cannot be averaged
     together.  From https://stackoverflow.com/questions/57812300/
@@ -387,7 +387,7 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
     ----------
     dt : pandas.Series
         First series with datetime values
-    dt_right : pandas.Series
+    dt_left : pandas.Series
         Second series with datetime values.
 
     Returns
@@ -398,7 +398,7 @@ def _avg_timestamp_old_Pandas(dt, dt_right):
     import calendar
 
     temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
-                            'dt_right' : dt_right.dt.tz_localize(None)
+                            'dt_left' : dt_left.dt.tz_localize(None)
                             }).tz_localize(None)
 
     # conversion from dates to seconds since epoch (unix time)
