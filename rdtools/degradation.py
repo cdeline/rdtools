@@ -395,9 +395,15 @@ def _avg_timestamp_old_Pandas(dt, dt_left):
     '''
     import calendar
 
-    temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+    # allow for numeric index
+    try:
+        temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+                                'dt_left' : dt_left.dt.tz_localize(None)
+                                }).tz_localize(None)
+    except TypeError: # in case numeric index passed
+        temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
                             'dt_left' : dt_left.dt.tz_localize(None)
-                            }).tz_localize(None)
+                            })
 
     # conversion from dates to seconds since epoch (unix time)
     def to_unix(s):
@@ -418,7 +424,13 @@ def _avg_timestamp_old_Pandas(dt, dt_left):
         except TypeError:
             averages.append(pd.NaT)
     temp_df['averages'] = averages
-    return (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
+    
+    try:
+        dt_center = (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
+    except TypeError:  # not a timeseries index
+        dt_center = (temp_df['averages']).dt.tz_localize(dt.dt.tz)
+    
+    return dt_center
 
 
 def _mk_test(x, alpha=0.05):
