@@ -237,9 +237,9 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     energy_normalized.name = 'energy'
     energy_normalized.index.name = 'dt'
 
-    if label not in {None, "right", "center"}:
+    if label not in {None, "right", "left", "center"}:
         raise ValueError(f"Unsupported value {label} for `label`."
-                         " Must be 'right' or 'center'.")
+                         " Must be 'right', 'left' or 'center'.")
     if label is None:
         label = "right"
 
@@ -424,7 +424,7 @@ def _avg_timestamp_old_Pandas(dt, dt_left):
         except TypeError:
             averages.append(pd.NaT)
     temp_df['averages'] = averages
-    
+
     try:
         dt_center = (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
     except TypeError:  # not a timeseries index
