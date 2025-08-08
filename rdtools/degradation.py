@@ -301,7 +301,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     Rd_pct = yoy_result.median()
 
-    YoY_times = df.dropna(subset=['yoy'], inplace=False)
+    YoY_times = df.dropna(subset=['yoy'], inplace=False).copy()
 
     # calculate usage of points.
     df_left = YoY_times.set_index(YoY_times.dt_left)  # .drop_duplicates('dt_left')
@@ -391,10 +391,13 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         return (Rd_pct, Rd_CI, calc_info)
 
     else:  # If we do not need confidence intervals and exceedance level
+        """ # TODO: return tuple just like all other cases. Issue: test_bootstrap_module
         return (Rd_pct, None, {
             'YoY_values': yoy_result,
             'usage_of_points': energy_normalized.set_index('dt')['usage_of_points']
         })
+        """
+        return Rd_pct
 
 
 def _avg_timestamp_old_Pandas(dt, dt_left):
