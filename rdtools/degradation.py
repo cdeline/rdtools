@@ -180,7 +180,7 @@ def degradation_classical_decomposition(energy_normalized,
 def degradation_year_on_year(energy_normalized, recenter=True,
                              exceedance_prob=95, confidence_level=68.2,
                              uncertainty_method='simple', block_length=30,
-                             label='right'):
+                             label='right', multi_yoy=False):
     '''
     Estimate the trend of a timeseries using the year-on-year decomposition
     approach and calculate a Monte Carlo-derived confidence interval of slope.
@@ -209,8 +209,13 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         If `uncertainty_method` is 'circular_block', `block_length`
         determines the length of the blocks used in the circular block bootstrapping
         in number of days. Must be shorter than a third of the time series.
-    label    : {'right', 'center'}, default 'right'
+    label    : {'right', 'center', 'left'}, default 'right'
         Which Year-on-Year slope edge to label.
+    multi_yoy : bool, default False
+        Whether to return the standard Year-on-Year slopes where each slope
+        is calculated over points separated by 365 days (default) or 
+        multi_year-on-year where points can be separated by N * 365 days
+        where N is an integer from 1 to the length of the dataset in years.
 
     Returns
     -------
@@ -281,8 +286,12 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     # dataframe container for combined year-over-year changes
     df = pd.DataFrame()
-    for y in range(1, int((energy_normalized.iloc[-1]['dt'] -
-                           energy_normalized.iloc[0]['dt']).days/365)+1):
+    if multi_yoy:
+        year_range = range(1, int((energy_normalized.iloc[-1]['dt'] -
+                                   energy_normalized.iloc[0]['dt']).days/365)+1)
+    else:
+        year_range = [1]
+    for y in year_range:
         energy_normalized['dt_shifted'] = energy_normalized.dt + pd.DateOffset(years=y)
         # Merge with what happened one year ago, use tolerance of 8 days to allow
         # for weekly aggregated data
