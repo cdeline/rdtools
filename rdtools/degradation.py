@@ -237,9 +237,9 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     energy_normalized.name = 'energy'
     energy_normalized.index.name = 'dt'
 
-    if label not in {None, "right", "center"}:
+    if label not in {None, "right", "left", "center"}:
         raise ValueError(f"Unsupported value {label} for `label`."
-                         " Must be 'right' or 'center'.")
+                         " Must be 'right', 'left' or 'center'.")
     if label is None:
         label = "right"
 
@@ -292,20 +292,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     df['time_diff_years'] = (df.dt - df.dt_left) / pd.Timedelta('365d')
     df['yoy'] = 100.0 * (df.energy - df.energy_left) / (df.time_diff_years)
-    df.index = df.dt
-
-    df_left = df.set_index(df.dt_left).drop_duplicates('dt_left')
-    df['usage_of_points'] = df.yoy.notnull().astype(int).add(
-                df_left.yoy.notnull().astype(int), fill_value=0)
-    if pd.__version__ < '2.0.0':
-        # For old Pandas versions < 2.0.0, time columns cannot be averaged
-        # with each other, so we use a custom function to calculate center label
-        df['dt_center'] = _avg_timestamp_old_Pandas(df.dt, df.dt_left)
-    else:
-        df['dt_center'] = pd.to_datetime(df[['dt', 'dt_left']].mean(axis=1))
-    if label == 'center':
-        df = df.set_index(df.dt_center)
-        df.index.name = 'dt'
+    # df.index = df.dt
 
     yoy_result = df.yoy.dropna()
 
@@ -314,11 +301,43 @@ def degradation_year_on_year(energy_normalized, recenter=True,
 
     Rd_pct = yoy_result.median()
 
+    YoY_times = df.dropna(subset=['yoy'], inplace=False).copy()
+
+    # calculate usage of points.
+    df_left = YoY_times.set_index(YoY_times.dt_left)  # .drop_duplicates('dt_left')
+    df_right = YoY_times.set_index(YoY_times.dt)  # .drop_duplicates('dt')
+    usage_of_points = df_right.yoy.notnull().astype(int).add(
+                df_left.yoy.notnull().astype(int),
+                fill_value=0).groupby(level=0).sum()
+    usage_of_points.name = 'usage_of_points'
+
+    if pd.__version__ < '2.0.0':
+        # For old Pandas versions < 2.0.0, time columns cannot be averaged
+        # with each other, so we use a custom function to calculate center label
+        YoY_times['dt_center'] = _avg_timestamp_old_Pandas(YoY_times['dt'], YoY_times['dt_left'])
+    else:
+        YoY_times['dt_center'] = pd.to_datetime(YoY_times[['dt', 'dt_left']].mean(axis=1))
+    # if label == 'center':
+    #    df = df.set_index(df.dt_center)
+    #    df.index.name = 'dt'
+
+    YoY_times = YoY_times[['dt', 'dt_center', 'dt_left']]
+    YoY_times = YoY_times.rename(columns={'dt': 'dt_right'})
+
+    YoY_times.set_index(YoY_times[f'dt_{label}'], inplace=True)
+    # YoY_times = YoY_times.rename_axis(None, axis=1)
+    YoY_times.index.name = None
+    yoy_result.index = YoY_times[f'dt_{label}']
+    yoy_result.index.name = None
+
+    energy_normalized = energy_normalized.merge(usage_of_points, how='left', left_on='dt',
+                                                right_index=True, left_index=False).fillna(0.0)
+
     if uncertainty_method == 'simple':  # If we need the full results
         calc_info = {
             'YoY_values': yoy_result,
             'renormalizing_factor': renorm,
-            'usage_of_points': df['usage_of_points']
+            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points']
         }
 
         # bootstrap to determine 68% CI and exceedance probability
@@ -367,14 +386,19 @@ def degradation_year_on_year(energy_normalized, recenter=True,
             'YoY_values': yoy_result,
             'renormalizing_factor': renorm,
             'exceedance_level': exceedance_level,
-            'usage_of_points': df['usage_of_points'],
+            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points'],
             'bootstrap_rates': bootstrap_rates}
 
         return (Rd_pct, Rd_CI, calc_info)
 
     else:  # If we do not need confidence intervals and exceedance level
-        calc_info = {'YoY_values': yoy_result}
-        return (Rd_pct, None, calc_info)
+        """ # TODO: return tuple just like all other cases. Issue: test_bootstrap_module
+        return (Rd_pct, None, {
+            'YoY_values': yoy_result,
+            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points']
+        })
+        """
+        return Rd_pct
 
 
 def _avg_timestamp_old_Pandas(dt, dt_left):
@@ -397,9 +421,15 @@ def _avg_timestamp_old_Pandas(dt, dt_left):
     '''
     import calendar
 
-    temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
-                            'dt_left' : dt_left.dt.tz_localize(None)
-                            }).tz_localize(None)
+    # allow for numeric index
+    try:
+        temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+                                'dt_left' : dt_left.dt.tz_localize(None)
+                                }).tz_localize(None)
+    except TypeError:  # in case numeric index passed
+        temp_df = pd.DataFrame({'dt' : dt.dt.tz_localize(None),
+                                'dt_left' : dt_left.dt.tz_localize(None)
+                                })
 
     # conversion from dates to seconds since epoch (unix time)
     def to_unix(s):
@@ -420,7 +450,13 @@ def _avg_timestamp_old_Pandas(dt, dt_left):
         except TypeError:
             averages.append(pd.NaT)
     temp_df['averages'] = averages
-    return (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
+
+    try:
+        dt_center = (temp_df['averages'].tz_localize(dt.dt.tz)).dt.tz_localize(dt.dt.tz)
+    except TypeError:  # not a timeseries index
+        dt_center = (temp_df['averages']).dt.tz_localize(dt.dt.tz)
+
+    return dt_center
 
 
 def _mk_test(x, alpha=0.05):
