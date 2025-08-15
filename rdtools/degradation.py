@@ -279,16 +279,20 @@ def degradation_year_on_year(energy_normalized, recenter=True,
     energy_normalized = energy_normalized.reset_index()
     energy_normalized['energy'] = energy_normalized['energy'] / renorm
 
-    energy_normalized['dt_shifted'] = energy_normalized.dt + pd.DateOffset(years=1)
-
-    # Merge with what happened one year ago, use tolerance of 8 days to allow
-    # for weekly aggregated data
-    df = pd.merge_asof(energy_normalized[['dt', 'energy']],
-                       energy_normalized.sort_values('dt_shifted'),
-                       left_on='dt', right_on='dt_shifted',
-                       suffixes=['', '_left'],
-                       tolerance=pd.Timedelta('8D')
-                       )
+    # dataframe container for combined year-over-year changes
+    df = pd.DataFrame()
+    for y in range(1, int((energy_normalized.iloc[-1]['dt'] -
+                           energy_normalized.iloc[0]['dt']).days/365)+1):
+        energy_normalized['dt_shifted'] = energy_normalized.dt + pd.DateOffset(years=y)
+        # Merge with what happened one year ago, use tolerance of 8 days to allow
+        # for weekly aggregated data
+        df_temp = pd.merge_asof(energy_normalized[['dt', 'energy']],
+                                energy_normalized.sort_values('dt_shifted'),
+                                left_on='dt', right_on='dt_shifted',
+                                suffixes=['', '_left'],
+                                tolerance=pd.Timedelta('8D')
+                                )
+        df = pd.concat([df, df_temp], ignore_index=True)
 
     df['time_diff_years'] = (df.dt - df.dt_left) / pd.Timedelta('365d')
     df['yoy'] = 100.0 * (df.energy - df.energy_left) / (df.time_diff_years)
@@ -317,9 +321,6 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         YoY_times['dt_center'] = _avg_timestamp_old_Pandas(YoY_times['dt'], YoY_times['dt_left'])
     else:
         YoY_times['dt_center'] = pd.to_datetime(YoY_times[['dt', 'dt_left']].mean(axis=1))
-    # if label == 'center':
-    #    df = df.set_index(df.dt_center)
-    #    df.index.name = 'dt'
 
     YoY_times = YoY_times[['dt', 'dt_center', 'dt_left']]
     YoY_times = YoY_times.rename(columns={'dt': 'dt_right'})
@@ -337,7 +338,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         calc_info = {
             'YoY_values': yoy_result,
             'renormalizing_factor': renorm,
-            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points']
+            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points'],
+            'YoY_times': YoY_times[['dt_right', 'dt_center', 'dt_left']]
         }
 
         # bootstrap to determine 68% CI and exceedance probability
@@ -387,6 +389,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
             'renormalizing_factor': renorm,
             'exceedance_level': exceedance_level,
             'usage_of_points': energy_normalized.set_index('dt')['usage_of_points'],
+            'YoY_times': YoY_times[['dt_right', 'dt_center', 'dt_left']],
             'bootstrap_rates': bootstrap_rates}
 
         return (Rd_pct, Rd_CI, calc_info)
@@ -395,7 +398,8 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         """ # TODO: return tuple just like all other cases. Issue: test_bootstrap_module
         return (Rd_pct, None, {
             'YoY_values': yoy_result,
-            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points']
+            'usage_of_points': energy_normalized.set_index('dt')['usage_of_points'],
+            'YoY_times': YoY_times[['dt_right', 'dt_center', 'dt_left']]}
         })
         """
         return Rd_pct
