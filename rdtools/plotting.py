@@ -54,8 +54,8 @@ def degradation_summary_plots(yoy_rd, yoy_ci, yoy_info, normalized_yield,
         Include extra information in the returned figure:
 
         * Color code points by the number of times they get used in calculating
-          Rd slopes.  Default color: 2 times (as a start and endpoint). Green:
-          1 time. Red: 0 times.
+          Rd slopes.  Default color: even times (as a start and endpoint). Green:
+          odd times. Red: 0 times.
         * The number of year-on-year slopes contributing to the histogram.
 
     Note
@@ -109,8 +109,9 @@ def degradation_summary_plots(yoy_rd, yoy_ci, yoy_info, normalized_yield,
 
     renormalized_yield = normalized_yield / yoy_info['renormalizing_factor']
     if detailed:
-        colors = yoy_info['usage_of_points'].map({0: 'red', 1: 'green', 2: plot_color},
-                                                 na_action='ignore').fillna(plot_color)
+        colors = yoy_info['usage_of_points'].map({0: 'red', 1: 'green', 3: 'green', 5: 'green',
+                                                  7: 'green', 9: 'green', 11: 'green'
+                                                  }, na_action='ignore').fillna(plot_color)
     else:
         colors = plot_color
     ax1.scatter(
