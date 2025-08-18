@@ -213,7 +213,7 @@ def degradation_year_on_year(energy_normalized, recenter=True,
         Which Year-on-Year slope edge to label.
     multi_yoy : bool, default False
         Whether to return the standard Year-on-Year slopes where each slope
-        is calculated over points separated by 365 days (default) or 
+        is calculated over points separated by 365 days (default) or
         multi_year-on-year where points can be separated by N * 365 days
         where N is an integer from 1 to the length of the dataset in years.
 
