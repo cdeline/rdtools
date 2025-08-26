@@ -54,8 +54,8 @@ def degradation_summary_plots(yoy_rd, yoy_ci, yoy_info, normalized_yield,
         Include extra information in the returned figure:
 
         * Color code points by the number of times they get used in calculating
-          Rd slopes.  Default color: 2 times (as a start and endpoint). Green:
-          1 time. Red: 0 times.
+          Rd slopes.  Default color: even times (as a start and endpoint). Green:
+          odd times. Red: 0 times.
         * The number of year-on-year slopes contributing to the histogram.
 
     Note
@@ -109,7 +109,9 @@ def degradation_summary_plots(yoy_rd, yoy_ci, yoy_info, normalized_yield,
 
     renormalized_yield = normalized_yield / yoy_info['renormalizing_factor']
     if detailed:
-        colors = yoy_info['usage_of_points'].map({0: 'red', 1: 'green', 2: plot_color})
+        colors = yoy_info['usage_of_points'].map({0: 'red', 1: 'green', 3: 'green', 5: 'green',
+                                                  7: 'green', 9: 'green', 11: 'green'
+                                                  }, na_action='ignore').fillna(plot_color)
     else:
         colors = plot_color
     ax1.scatter(
@@ -507,7 +509,12 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
         center = True
         offset_days = 365
 
-    roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2, center=center)
+    try:
+        roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2, center=center)
+    except ValueError:  # this occurs with degradation_yoy(multi_yoy=True). resample to daily mean
+        roller = results_values.resample('D').mean().rolling(f'{rolling_days}d',
+                                                             min_periods=rolling_days//2,
+                                                             center=center)
     # unfortunately it seems that you can't return multiple values in the rolling.apply() kernel.
     # TODO: figure out some workaround to return both percentiles in a single pass
     if include_ci:
