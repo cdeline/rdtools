@@ -233,23 +233,25 @@ class DegradationTestCase(unittest.TestCase):
         from rdtools.degradation import _avg_timestamp_old_Pandas
         funcName = sys._getframe().f_code.co_name
         logging.debug('Running {}'.format(funcName))
-        dt = pd.Series(self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'),
-                       index=self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'))
+        dt = pd.Series(self.get_corr_energy(0, 'D').index[-4:].tz_localize('UTC'),
+                       index=self.get_corr_energy(0, 'D').index[-4:].tz_localize('UTC'))
         dt_right = pd.Series(self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC') +
                              pd.Timedelta(days=365),
                              index=self.get_corr_energy(0, 'D').index[-3:].tz_localize('UTC'))
         # Expected result is the midpoint between each pair
         expected = pd.Series([
+            pd.NaT,
             pd.Timestamp("2015-06-30 12:00:00"),
             pd.Timestamp("2015-07-01 12:00:00"),
             pd.Timestamp("2015-07-02 12:00:00")],
-            index=self.get_corr_energy(0, 'D').index[-3:],
+            index=self.get_corr_energy(0, 'D').index[-4:],
             name='averages', dtype='datetime64[ns, UTC]'
         ).tz_localize('UTC')
 
         result = _avg_timestamp_old_Pandas(dt, dt_right).asfreq(freq='D')
         print(result)
         print(expected)
+
         pd.testing.assert_series_equal(result, expected)
 
 

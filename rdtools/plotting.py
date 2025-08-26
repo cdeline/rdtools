@@ -485,8 +485,12 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True,
         plot_color = 'tab:orange'
     if ci_color is None:
         ci_color = 'C0'
+    try:
+        roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2)
+    except ValueError:  # this occurs with degradation_yoy(multi_yoy=True). resample to daily mean
+        roller = results_values.resample('D').mean().rolling(f'{rolling_days}d',
+                                                             min_periods=rolling_days//2)
 
-    roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2)
     # unfortunately it seems that you can't return multiple values in the rolling.apply() kernel.
     # TODO: figure out some workaround to return both percentiles in a single pass
     if include_ci:
