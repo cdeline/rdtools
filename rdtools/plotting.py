@@ -510,7 +510,8 @@ def degradation_timeseries_plot(yoy_info, rolling_days=365, include_ci=True, lab
         offset_days = 365
 
     try:
-        roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2, center=center)
+        roller = results_values.rolling(f'{rolling_days}d', min_periods=rolling_days//2,
+                                        center=center)
     except ValueError:  # this occurs with degradation_yoy(multi_yoy=True). resample to daily mean
         roller = results_values.resample('D').mean().rolling(f'{rolling_days}d',
                                                              min_periods=rolling_days//2,
